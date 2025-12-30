@@ -1,0 +1,20 @@
+name: project_lints
+description: "A new Flutter package project."
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: ^3.10.4
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  analyzer: '>=6.0.0 <9.0.0'
+  custom_lint_builder: ^0.8.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+
+flutter:
