@@ -1,8 +1,8 @@
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class PreferAssetExtensionRule extends DartLintRule {
-  PreferAssetExtensionRule() : super(code: _code);
+class PreferStringExtension extends DartLintRule {
+  PreferStringExtension() : super(code: _code);
 
   static const _code = LintCode(
     name: 'prefer_asset_extension',
