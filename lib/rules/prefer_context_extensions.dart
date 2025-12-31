@@ -25,10 +25,13 @@ class PreferContextExtensionsRule extends DartLintRule {
       if (target is! Identifier) return;
 
       final targetName = target.name;
+
       if (targetName == 'Theme') {
         _checkThemeUsage(node, reporter);
       } else if (targetName == 'MediaQuery') {
         _checkMediaQueryUsage(node, reporter);
+      } else if (targetName == 'FocusScope') {
+        _checkFocusScopeUsage(node, reporter);
       }
     });
   }
@@ -54,7 +57,6 @@ class PreferContextExtensionsRule extends DartLintRule {
     if (parent is! PropertyAccess) return;
 
     final property = parent.propertyName.name;
-
     if (property == 'size') {
       final grandParent = parent.parent;
       if (grandParent is! PropertyAccess) return;
@@ -72,6 +74,20 @@ class PreferContextExtensionsRule extends DartLintRule {
 
       final viewInsetsProperty = grandParent.propertyName.name;
       if (viewInsetsProperty == 'bottom') {
+        reporter.atNode(grandParent, _code);
+      }
+    }
+  }
+
+  void _checkFocusScopeUsage(
+    MethodInvocation node,
+    DiagnosticReporter reporter,
+  ) {
+    final parent = node.parent;
+    if (parent is PropertyAccess) {
+      final grandParent = parent.parent;
+      if (grandParent is MethodInvocation &&
+          grandParent.methodName.name == 'unfocus') {
         reporter.atNode(grandParent, _code);
       }
     }
@@ -103,6 +119,8 @@ class _ReplaceWithContextExtension extends DartFix {
         replacement = _getThemeReplacement(node);
       } else if (targetName == 'MediaQuery') {
         replacement = _getMediaQueryReplacement(node);
+      } else if (targetName == 'FocusScope') {
+        replacement = _getFocusScopeReplacement(node);
       }
 
       if (replacement != null) {
@@ -116,6 +134,13 @@ class _ReplaceWithContextExtension extends DartFix {
           if (parent is PropertyAccess) {
             final grandParent = parent.parent;
             if (grandParent is PropertyAccess) {
+              // MediaQuery case
+              builder.addSimpleReplacement(
+                grandParent.sourceRange,
+                replacement ?? '',
+              );
+            } else if (grandParent is MethodInvocation) {
+              // FocusScope case
               builder.addSimpleReplacement(
                 grandParent.sourceRange,
                 replacement ?? '',
@@ -174,5 +199,18 @@ class _ReplaceWithContextExtension extends DartFix {
       }
     }
     return null;
+  }
+
+  String? _getFocusScopeReplacement(MethodInvocation node) {
+    final parent = node.parent;
+    if (parent is! PropertyAccess) return null;
+
+    final grandParent = parent.parent;
+    if (grandParent is! MethodInvocation) return null;
+
+    if (grandParent.methodName.name != 'unfocus') return null;
+
+    final contextArg = node.argumentList.arguments.first.toString();
+    return '$contextArg.unfocus()';
   }
 }
