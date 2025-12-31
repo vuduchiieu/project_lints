@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-import 'package:analyzer/error/listener.dart';
+import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class PreferTapExtensionRule extends DartLintRule {
@@ -8,9 +8,25 @@ class PreferTapExtensionRule extends DartLintRule {
 
   static const _code = LintCode(
     name: 'prefer_tap_extension',
-    problemMessage: '🚫 Dùng .tap() extension thay vì GestureDetector',
-    errorSeverity: .WARNING,
+    problemMessage:
+        '🚫 Dùng .tap() extension thay vì GestureDetector/InkWell/InkResponse',
+    errorSeverity: DiagnosticSeverity.error, // ← Fix: ERROR thay vì WARNING
   );
+
+  // ✅ Danh sách widgets BỊ CẤM
+  static const _bannedWidgets = {'GestureDetector', 'InkWell', 'InkResponse'};
+
+  // ✅ Danh sách widgets ĐƯỢC PHÉP (có mục đích riêng)
+  static const _allowedWidgets = {
+    'TextButton',
+    'ElevatedButton',
+    'OutlinedButton',
+    'IconButton',
+    'FloatingActionButton',
+    'PopupMenuButton',
+    'DropdownButton',
+    'MenuItemButton',
+  };
 
   @override
   void run(
@@ -19,10 +35,19 @@ class PreferTapExtensionRule extends DartLintRule {
     CustomLintContext context,
   ) {
     context.registry.addInstanceCreationExpression((node) {
-      // ✅ CHỈ check GestureDetector, BỎ QUA InkWell, InkResponse, etc
       final constructorName = node.constructorName.toString();
 
-      if (!constructorName.startsWith('GestureDetector')) return;
+      // Bỏ qua các button widgets
+      if (_allowedWidgets.any((w) => constructorName.startsWith(w))) {
+        return;
+      }
+
+      // Check nếu là widget bị cấm
+      final isBanned = _bannedWidgets.any(
+        (widget) => constructorName.startsWith(widget),
+      );
+
+      if (!isBanned) return;
 
       final args = node.argumentList.arguments;
       bool hasOnTap = false;
@@ -32,14 +57,14 @@ class PreferTapExtensionRule extends DartLintRule {
       for (final arg in args) {
         if (arg is NamedExpression) {
           final name = arg.name.label.name;
-          if (name == 'onTap') hasOnTap = true;
+          if (name == 'onTap' || name == 'onPressed') hasOnTap = true;
           if (name == 'child') hasChild = true;
           argCount++;
         }
       }
 
-      // Only report if it's simple GestureDetector with onTap + child
-      if (hasOnTap && hasChild && argCount <= 3) {
+      // Báo lỗi nếu có onTap + child và không quá phức tạp
+      if (hasOnTap && hasChild && argCount <= 4) {
         reporter.atNode(node, _code);
       }
     });
@@ -62,7 +87,13 @@ class _ReplaceWithTapExtension extends DartFix {
       if (!node.sourceRange.intersects(analysisError.sourceRange)) return;
 
       final constructorName = node.constructorName.toString();
-      if (!constructorName.startsWith('GestureDetector')) return;
+
+      // Check nếu là widget bị cấm
+      final isBanned = PreferTapExtensionRule._bannedWidgets.any(
+        (widget) => constructorName.startsWith(widget),
+      );
+
+      if (!isBanned) return;
 
       final args = node.argumentList.arguments;
       String? onTapValue;
@@ -71,7 +102,7 @@ class _ReplaceWithTapExtension extends DartFix {
       for (final arg in args) {
         if (arg is NamedExpression) {
           final name = arg.name.label.name;
-          if (name == 'onTap') {
+          if (name == 'onTap' || name == 'onPressed') {
             onTapValue = arg.expression.toString();
           } else if (name == 'child') {
             childValue = arg.expression.toString();
