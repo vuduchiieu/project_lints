@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
+import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class PreferTapExtensionRule extends DartLintRule {
@@ -10,13 +10,11 @@ class PreferTapExtensionRule extends DartLintRule {
     name: 'prefer_tap_extension',
     problemMessage:
         '🚫 Dùng .tap() extension thay vì GestureDetector/InkWell/InkResponse',
-    errorSeverity: DiagnosticSeverity.error, // ← Fix: ERROR thay vì WARNING
+    errorSeverity: .ERROR,
   );
 
-  // ✅ Danh sách widgets BỊ CẤM
   static const _bannedWidgets = {'GestureDetector', 'InkWell', 'InkResponse'};
 
-  // ✅ Danh sách widgets ĐƯỢC PHÉP (có mục đích riêng)
   static const _allowedWidgets = {
     'TextButton',
     'ElevatedButton',
