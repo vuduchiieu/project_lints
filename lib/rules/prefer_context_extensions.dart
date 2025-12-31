@@ -4,13 +4,21 @@ import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class PreferContextExtensionsRule extends DartLintRule {
-  PreferContextExtensionsRule() : super(code: _code);
+  PreferContextExtensionsRule() : super(code: _baseCode);
 
-  static const _code = LintCode(
+  static final _baseCode = LintCode(
     name: 'prefer_context_extensions',
-    problemMessage: '🚫 Dùng context extensions thay vì gọi trực tiếp',
+    problemMessage: 'Prefer context extensions',
     errorSeverity: .ERROR,
   );
+
+  LintCode _code({required String from, required String to}) {
+    return LintCode(
+      name: 'prefer_context_extensions',
+      problemMessage: '🚫 Không dùng $from, hãy dùng $to',
+      errorSeverity: .ERROR,
+    );
+  }
 
   @override
   void run(
@@ -34,6 +42,19 @@ class PreferContextExtensionsRule extends DartLintRule {
         _checkFocusScopeUsage(node, reporter);
       }
     });
+
+    context.registry.addInstanceCreationExpression((node) {
+      final type = node.constructorName.type;
+
+      if (type.name.lexeme != 'TextStyle') return;
+      final path = resolver.source.fullName;
+      if (path.contains('theme') || path.contains('text_theme')) return;
+
+      reporter.atNode(
+        node,
+        _code(from: 'TextStyle()', to: 'context.textTheme'),
+      );
+    });
   }
 
   void _checkThemeUsage(MethodInvocation node, DiagnosticReporter reporter) {
@@ -43,9 +64,15 @@ class PreferContextExtensionsRule extends DartLintRule {
     final property = parent.propertyName.name;
 
     if (property == 'textTheme') {
-      reporter.atNode(parent, _code);
+      reporter.atNode(
+        parent,
+        _code(from: 'Theme.of(context).textTheme', to: 'context.textTheme'),
+      );
     } else if (property == 'platform') {
-      reporter.atNode(parent, _code);
+      reporter.atNode(
+        parent,
+        _code(from: 'Theme.of(context).platform', to: 'context.platform'),
+      );
     }
   }
 
@@ -64,9 +91,18 @@ class PreferContextExtensionsRule extends DartLintRule {
       final sizeProperty = grandParent.propertyName.name;
 
       if (sizeProperty == 'width') {
-        reporter.atNode(grandParent, _code);
+        reporter.atNode(
+          grandParent,
+          _code(from: 'MediaQuery.of(context).size.width', to: 'context.width'),
+        );
       } else if (sizeProperty == 'height') {
-        reporter.atNode(grandParent, _code);
+        reporter.atNode(
+          grandParent,
+          _code(
+            from: 'MediaQuery.of(context).size.height',
+            to: 'context.height',
+          ),
+        );
       }
     } else if (property == 'viewInsets') {
       final grandParent = parent.parent;
@@ -74,7 +110,13 @@ class PreferContextExtensionsRule extends DartLintRule {
 
       final viewInsetsProperty = grandParent.propertyName.name;
       if (viewInsetsProperty == 'bottom') {
-        reporter.atNode(grandParent, _code);
+        reporter.atNode(
+          grandParent,
+          _code(
+            from: 'MediaQuery.of(context).viewInsets.bottom',
+            to: 'context.viewInsets',
+          ),
+        );
       }
     }
   }
@@ -88,7 +130,13 @@ class PreferContextExtensionsRule extends DartLintRule {
       final grandParent = parent.parent;
       if (grandParent is MethodInvocation &&
           grandParent.methodName.name == 'unfocus') {
-        reporter.atNode(grandParent, _code);
+        reporter.atNode(
+          grandParent,
+          _code(
+            from: 'FocusScope.of(context).unfocus()',
+            to: 'context.unfocus()',
+          ),
+        );
       }
     }
   }

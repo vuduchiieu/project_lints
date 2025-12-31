@@ -48,6 +48,7 @@ class PreferDotShorthandRule extends DartLintRule {
     'FloatingActionButtonLocation',
     'NavigationRailLabelType',
     'TabBarIndicatorSize',
+    'AlignmentGeometry',
     'EdgeInsets',
   };
 
