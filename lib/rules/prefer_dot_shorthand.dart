@@ -56,7 +56,6 @@ class PreferDotShorthandRule extends DartLintRule {
     'BorderRadius',
     'BorderRadiusGeometry',
     'Radius',
-    'Size',
     'Rect',
   };
 
