@@ -56,7 +56,16 @@ class PreferDotShorthandRule extends DartLintRule {
     'BorderRadius',
     'BorderRadiusGeometry',
     'Radius',
+
     'Rect',
+  };
+
+  static const _excludedClasses = {
+    'Icons',
+    'Colors',
+    'Curves',
+    'Size',
+    'Offset',
   };
 
   @override
@@ -74,16 +83,16 @@ class PreferDotShorthandRule extends DartLintRule {
 
       if (!_startsWithUpperCase(className)) return;
 
-      // ✅ TRONG SWITCH CASE: Chỉ check ENUM (bỏ qua Icons, Colors, ...)
+      // ✅ BỎ QUA các class trong blacklist
+      if (_excludedClasses.contains(className)) return;
+
+      // ✅ TRONG SWITCH CASE: Báo lỗi cho TẤT CẢ ClassName.member
       if (_isInSwitchCase(node)) {
-        // Chỉ báo lỗi nếu là enum trong list
-        if (_flutterEnums.contains(className)) {
-          reporter.atNode(node, _code);
-        }
-        return; // Return luôn, không check tiếp
+        reporter.atNode(node, _code);
+        return;
       }
 
-      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
+      // ✅ NGOÀI SWITCH CASE: Chỉ check Flutter enums/static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -105,15 +114,16 @@ class PreferDotShorthandRule extends DartLintRule {
 
       if (!_startsWithUpperCase(className)) return;
 
-      // ✅ TRONG SWITCH CASE: Chỉ check ENUM
+      // ✅ BỎ QUA các class trong blacklist
+      if (_excludedClasses.contains(className)) return;
+
+      // ✅ TRONG SWITCH CASE: Báo lỗi cho TẤT CẢ ClassName.member
       if (_isInSwitchCase(node)) {
-        if (_flutterEnums.contains(className)) {
-          reporter.atNode(node, _code);
-        }
+        reporter.atNode(node, _code);
         return;
       }
 
-      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
+      // ✅ NGOÀI SWITCH CASE: Chỉ check Flutter enums/static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
