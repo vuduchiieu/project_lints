@@ -48,6 +48,7 @@ class PreferDotShorthandRule extends DartLintRule {
     'NavigationRailLabelType',
     'TabBarIndicatorSize',
     'AlignmentGeometry',
+    'WidgetStateProperty',
   };
 
   static const _flutterStaticMembers = {
