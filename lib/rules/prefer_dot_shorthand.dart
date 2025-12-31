@@ -68,21 +68,24 @@ class PreferDotShorthandRule extends DartLintRule {
     CustomLintContext context,
   ) {
     context.registry.addPrefixedIdentifier((node) {
-      // BỎ QUA nếu đã dùng dot shorthand
       final source = node.toSource();
       if (source.startsWith('.')) return;
 
       final prefix = node.prefix;
       final className = prefix.name;
 
-      // ✅ CHỈ check nếu tên bắt đầu bằng CHỮ HOA (class name convention)
       if (!_startsWithUpperCase(className)) return;
 
+      // ✅ TRONG SWITCH CASE: Chỉ check ENUM (bỏ qua Icons, Colors, ...)
       if (_isInSwitchCase(node)) {
-        reporter.atNode(node, _code);
-        return;
+        // Chỉ báo lỗi nếu là enum trong list
+        if (_flutterEnums.contains(className)) {
+          reporter.atNode(node, _code);
+        }
+        return; // Return luôn, không check tiếp
       }
 
+      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -94,7 +97,6 @@ class PreferDotShorthandRule extends DartLintRule {
     });
 
     context.registry.addPropertyAccess((node) {
-      // BỎ QUA nếu đã dùng dot shorthand
       final source = node.toSource();
       if (source.startsWith('.')) return;
 
@@ -103,16 +105,17 @@ class PreferDotShorthandRule extends DartLintRule {
 
       final className = target.name;
 
-      // ✅ CHỈ check nếu tên bắt đầu bằng CHỮ HOA (class name convention)
-      // widget.cubit → bỏ qua (widget viết thường)
-      // TextOverflow.ellipsis → check (TextOverflow viết hoa)
       if (!_startsWithUpperCase(className)) return;
 
+      // ✅ TRONG SWITCH CASE: Chỉ check ENUM
       if (_isInSwitchCase(node)) {
-        reporter.atNode(node, _code);
+        if (_flutterEnums.contains(className)) {
+          reporter.atNode(node, _code);
+        }
         return;
       }
 
+      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -124,15 +127,12 @@ class PreferDotShorthandRule extends DartLintRule {
     });
 
     context.registry.addInstanceCreationExpression((node) {
-      // BỎ QUA nếu đã dùng dot shorthand
       final source = node.toSource();
       if (source.startsWith('.')) return;
 
       final constructorName = node.constructorName;
       final type = constructorName.type;
       final typeName = type.name2.toString();
-
-      // ✅ Class name luôn viết hoa nên không cần check
 
       if (!_flutterStaticMembers.contains(typeName)) return;
 
@@ -142,13 +142,11 @@ class PreferDotShorthandRule extends DartLintRule {
     });
   }
 
-  /// Check nếu string bắt đầu bằng chữ HOA
   bool _startsWithUpperCase(String name) {
     if (name.isEmpty) return false;
     final firstChar = name[0];
     return firstChar == firstChar.toUpperCase() &&
-        firstChar !=
-            firstChar.toLowerCase(); // Không phải số hoặc ký tự đặc biệt
+        firstChar != firstChar.toLowerCase();
   }
 
   bool _isInSwitchCase(AstNode node) {
