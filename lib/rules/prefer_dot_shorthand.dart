@@ -56,16 +56,7 @@ class PreferDotShorthandRule extends DartLintRule {
     'BorderRadius',
     'BorderRadiusGeometry',
     'Radius',
-
     'Rect',
-  };
-
-  static const _excludedClasses = {
-    'Icons',
-    'Colors',
-    'Curves',
-    'Size',
-    'Offset',
   };
 
   @override
@@ -83,16 +74,16 @@ class PreferDotShorthandRule extends DartLintRule {
 
       if (!_startsWithUpperCase(className)) return;
 
-      // ✅ BỎ QUA các class trong blacklist
-      if (_excludedClasses.contains(className)) return;
-
-      // ✅ TRONG SWITCH CASE: Báo lỗi cho TẤT CẢ ClassName.member
+      // ✅ TRONG SWITCH CASE: Chỉ check ENUM (bỏ qua Icons, Colors, ...)
       if (_isInSwitchCase(node)) {
-        reporter.atNode(node, _code);
-        return;
+        // Chỉ báo lỗi nếu là enum trong list
+        if (_flutterEnums.contains(className)) {
+          reporter.atNode(node, _code);
+        }
+        return; // Return luôn, không check tiếp
       }
 
-      // ✅ NGOÀI SWITCH CASE: Chỉ check Flutter enums/static members
+      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -114,16 +105,15 @@ class PreferDotShorthandRule extends DartLintRule {
 
       if (!_startsWithUpperCase(className)) return;
 
-      // ✅ BỎ QUA các class trong blacklist
-      if (_excludedClasses.contains(className)) return;
-
-      // ✅ TRONG SWITCH CASE: Báo lỗi cho TẤT CẢ ClassName.member
+      // ✅ TRONG SWITCH CASE: Chỉ check ENUM
       if (_isInSwitchCase(node)) {
-        reporter.atNode(node, _code);
+        if (_flutterEnums.contains(className)) {
+          reporter.atNode(node, _code);
+        }
         return;
       }
 
-      // ✅ NGOÀI SWITCH CASE: Chỉ check Flutter enums/static members
+      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -140,6 +130,7 @@ class PreferDotShorthandRule extends DartLintRule {
 
       final constructorName = node.constructorName;
       final type = constructorName.type;
+      // ignore: deprecated_member_use
       final typeName = type.name2.toString();
 
       if (!_flutterStaticMembers.contains(typeName)) return;
