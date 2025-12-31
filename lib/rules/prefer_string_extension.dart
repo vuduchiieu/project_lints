@@ -7,7 +7,7 @@ class PreferStringExtension extends DartLintRule {
   static const _code = LintCode(
     name: 'prefer_asset_extension',
     problemMessage:
-        '🚫 Dùng .toSvg() hoặc .toImage() extension thay vì SvgPicture.asset() hoặc Image.asset()',
+        '🚫 Dùng .toSvg(), .toImage() hoặc .toCachedImg() extension thay vì SvgPicture.asset(), Image.asset() hoặc CachedNetworkImage.',
     errorSeverity: .ERROR,
   );
 
@@ -18,10 +18,11 @@ class PreferStringExtension extends DartLintRule {
     CustomLintContext context,
   ) {
     context.registry.addInstanceCreationExpression((node) {
-      final constructorName = node.constructorName.toString();
+      final name = node.constructorName.toSource();
 
-      if (constructorName.contains('SvgPicture.asset') ||
-          constructorName.contains('Image.asset')) {
+      if (name.startsWith('SvgPicture.asset') ||
+          name.startsWith('Image.asset') ||
+          name.startsWith('CachedNetworkImage')) {
         reporter.atNode(node, _code);
       }
     });
