@@ -56,11 +56,9 @@ class PreferDotShorthandRule extends DartLintRule {
     'BorderRadius',
     'BorderRadiusGeometry',
     'Radius',
-    'Duration',
     'Size',
     'Offset',
     'Rect',
-    'FontWeight',
   };
 
   @override
@@ -69,12 +67,16 @@ class PreferDotShorthandRule extends DartLintRule {
     DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
-    // ✅ CHỈ check PrefixedIdentifier và PropertyAccess
-    // (đây là pattern ClassName.member - CHƯA dùng dot shorthand)
-
     context.registry.addPrefixedIdentifier((node) {
+      // BỎ QUA nếu đã dùng dot shorthand
+      final source = node.toSource();
+      if (source.startsWith('.')) return;
+
       final prefix = node.prefix;
       final className = prefix.name;
+
+      // ✅ CHỈ check nếu tên bắt đầu bằng CHỮ HOA (class name convention)
+      if (!_startsWithUpperCase(className)) return;
 
       if (_isInSwitchCase(node)) {
         reporter.atNode(node, _code);
@@ -82,8 +84,9 @@ class PreferDotShorthandRule extends DartLintRule {
       }
 
       if (!_flutterEnums.contains(className) &&
-          !_flutterStaticMembers.contains(className))
+          !_flutterStaticMembers.contains(className)) {
         return;
+      }
 
       if (_canUseShorthand(node)) {
         reporter.atNode(node, _code);
@@ -91,10 +94,19 @@ class PreferDotShorthandRule extends DartLintRule {
     });
 
     context.registry.addPropertyAccess((node) {
+      // BỎ QUA nếu đã dùng dot shorthand
+      final source = node.toSource();
+      if (source.startsWith('.')) return;
+
       final target = node.target;
       if (target is! SimpleIdentifier) return;
 
       final className = target.name;
+
+      // ✅ CHỈ check nếu tên bắt đầu bằng CHỮ HOA (class name convention)
+      // widget.cubit → bỏ qua (widget viết thường)
+      // TextOverflow.ellipsis → check (TextOverflow viết hoa)
+      if (!_startsWithUpperCase(className)) return;
 
       if (_isInSwitchCase(node)) {
         reporter.atNode(node, _code);
@@ -102,38 +114,41 @@ class PreferDotShorthandRule extends DartLintRule {
       }
 
       if (!_flutterEnums.contains(className) &&
-          !_flutterStaticMembers.contains(className))
+          !_flutterStaticMembers.contains(className)) {
         return;
+      }
 
       if (_canUseShorthand(node)) {
         reporter.atNode(node, _code);
       }
     });
 
-    // ✅ CHỈ check InstanceCreationExpression có ClassName prefix
     context.registry.addInstanceCreationExpression((node) {
+      // BỎ QUA nếu đã dùng dot shorthand
+      final source = node.toSource();
+      if (source.startsWith('.')) return;
+
       final constructorName = node.constructorName;
-
-      // ✅ Nếu type là SimpleIdentifier mà bắt đầu bằng chữ cái viết hoa
-      // → Đang dùng ClassName.constructor() → BÁO LỖI
-      // Nếu không có prefix (chỉ có .constructor()) → ĐÃ ĐÚNG → BỎ QUA
-
       final type = constructorName.type;
-
       final typeName = type.name2.toString();
 
-      // ✅ Nếu đã dùng dot shorthand (không có prefix), bỏ qua
-      // Kiểm tra: nếu source code bắt đầu bằng "." thì đã đúng rồi
-      final source = node.toSource();
-      if (source.startsWith('.')) return; // ← ĐÃ DÙNG DOT SHORTHAND
+      // ✅ Class name luôn viết hoa nên không cần check
 
-      // Check nếu là Flutter class
       if (!_flutterStaticMembers.contains(typeName)) return;
 
       if (_canUseShorthandForConstructor(node)) {
         reporter.atNode(node, _code);
       }
     });
+  }
+
+  /// Check nếu string bắt đầu bằng chữ HOA
+  bool _startsWithUpperCase(String name) {
+    if (name.isEmpty) return false;
+    final firstChar = name[0];
+    return firstChar == firstChar.toUpperCase() &&
+        firstChar !=
+            firstChar.toLowerCase(); // Không phải số hoặc ký tự đặc biệt
   }
 
   bool _isInSwitchCase(AstNode node) {
