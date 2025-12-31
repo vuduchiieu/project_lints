@@ -57,6 +57,7 @@ class PreferDotShorthandRule extends DartLintRule {
     'BorderRadiusGeometry',
     'Radius',
     'Rect',
+    'BoxShape',
   };
 
   @override
@@ -74,16 +75,13 @@ class PreferDotShorthandRule extends DartLintRule {
 
       if (!_startsWithUpperCase(className)) return;
 
-      // ✅ TRONG SWITCH CASE: Chỉ check ENUM (bỏ qua Icons, Colors, ...)
       if (_isInSwitchCase(node)) {
-        // Chỉ báo lỗi nếu là enum trong list
         if (_flutterEnums.contains(className)) {
           reporter.atNode(node, _code);
         }
-        return; // Return luôn, không check tiếp
+        return;
       }
 
-      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
@@ -104,16 +102,12 @@ class PreferDotShorthandRule extends DartLintRule {
       final className = target.name;
 
       if (!_startsWithUpperCase(className)) return;
-
-      // ✅ TRONG SWITCH CASE: Chỉ check ENUM
       if (_isInSwitchCase(node)) {
         if (_flutterEnums.contains(className)) {
           reporter.atNode(node, _code);
         }
         return;
       }
-
-      // ✅ NGOÀI SWITCH CASE: Check cả enum và static members
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className)) {
         return;
