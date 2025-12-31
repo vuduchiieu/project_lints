@@ -35,12 +35,10 @@ class PreferTapExtensionRule extends DartLintRule {
     context.registry.addInstanceCreationExpression((node) {
       final constructorName = node.constructorName.toString();
 
-      // Bỏ qua các button widgets
       if (_allowedWidgets.any((w) => constructorName.startsWith(w))) {
         return;
       }
 
-      // Check nếu là widget bị cấm
       final isBanned = _bannedWidgets.any(
         (widget) => constructorName.startsWith(widget),
       );
@@ -51,21 +49,70 @@ class PreferTapExtensionRule extends DartLintRule {
       bool hasOnTap = false;
       bool hasChild = false;
       int argCount = 0;
+      Expression? onTapExpression;
 
       for (final arg in args) {
         if (arg is NamedExpression) {
           final name = arg.name.label.name;
-          if (name == 'onTap' || name == 'onPressed') hasOnTap = true;
+          if (name == 'onTap' || name == 'onPressed') {
+            hasOnTap = true;
+            onTapExpression = arg.expression;
+          }
           if (name == 'child') hasChild = true;
           argCount++;
         }
       }
 
-      // Báo lỗi nếu có onTap + child và không quá phức tạp
+      if (onTapExpression != null && _isUnfocusCallback(onTapExpression)) {
+        return;
+      }
+
       if (hasOnTap && hasChild && argCount <= 4) {
         reporter.atNode(node, _code);
       }
     });
+  }
+
+  bool _isUnfocusCallback(Expression expr) {
+    if (expr is FunctionExpression) {
+      final body = expr.body;
+
+      if (body is ExpressionFunctionBody) {
+        return _isUnfocusExpression(body.expression);
+      }
+
+      if (body is BlockFunctionBody) {
+        final statements = body.block.statements;
+        if (statements.length == 1) {
+          final stmt = statements.first;
+          if (stmt is ExpressionStatement) {
+            return _isUnfocusExpression(stmt.expression);
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool _isUnfocusExpression(Expression expr) {
+    if (expr is MethodInvocation) {
+      final methodName = expr.methodName.name;
+
+      if (methodName == 'unfocus') {
+        return true;
+      }
+
+      final target = expr.target;
+      if (target is MethodInvocation && target.methodName.name == 'of') {
+        final targetTarget = target.target;
+        if (targetTarget is Identifier && targetTarget.name == 'FocusScope') {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   @override
@@ -86,7 +133,6 @@ class _ReplaceWithTapExtension extends DartFix {
 
       final constructorName = node.constructorName.toString();
 
-      // Check nếu là widget bị cấm
       final isBanned = PreferTapExtensionRule._bannedWidgets.any(
         (widget) => constructorName.startsWith(widget),
       );
