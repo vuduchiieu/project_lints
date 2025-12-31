@@ -13,5 +13,8 @@ class _ProjectLints extends PluginBase {
     PreferContextThemeRule(),
     PreferContextMediaQueryRule(),
     PreferContextFocusRule(),
+    PreferContextThemeRule(),
+    PreferContextMediaQueryRule(),
+    PreferContextFocusRule(),
   ];
 }
