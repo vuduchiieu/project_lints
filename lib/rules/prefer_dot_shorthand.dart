@@ -8,8 +8,7 @@ class PreferDotShorthandRule extends DartLintRule {
 
   static const _code = LintCode(
     name: 'prefer_dot_shorthand',
-    problemMessage:
-        '🚫 Dùng dot shorthand syntax (.contain thay vì BoxFit.contain)',
+    problemMessage: '🚫 Dùng dot shorthand syntax (.contain, .all(8))',
     errorSeverity: .ERROR,
   );
 
@@ -61,15 +60,7 @@ class PreferDotShorthandRule extends DartLintRule {
     'Size',
     'Offset',
     'Rect',
-    'Color',
-    'Colors',
-    'Icons',
     'FontWeight',
-    'Curves',
-    'TextStyle',
-    'BoxDecoration',
-    'BoxShadow',
-    'Matrix4',
   };
 
   @override
@@ -78,6 +69,9 @@ class PreferDotShorthandRule extends DartLintRule {
     DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
+    // ✅ CHỈ check PrefixedIdentifier và PropertyAccess
+    // (đây là pattern ClassName.member - CHƯA dùng dot shorthand)
+
     context.registry.addPrefixedIdentifier((node) {
       final prefix = node.prefix;
       final className = prefix.name;
@@ -90,8 +84,6 @@ class PreferDotShorthandRule extends DartLintRule {
       if (!_flutterEnums.contains(className) &&
           !_flutterStaticMembers.contains(className))
         return;
-
-      // if (_isInConstContext(node)) return; // ← XÓA dòng này
 
       if (_canUseShorthand(node)) {
         reporter.atNode(node, _code);
@@ -113,22 +105,30 @@ class PreferDotShorthandRule extends DartLintRule {
           !_flutterStaticMembers.contains(className))
         return;
 
-      // if (_isInConstContext(node)) return; // ← XÓA
-
       if (_canUseShorthand(node)) {
         reporter.atNode(node, _code);
       }
     });
 
+    // ✅ CHỈ check InstanceCreationExpression có ClassName prefix
     context.registry.addInstanceCreationExpression((node) {
-      final type = node.staticType;
-      final className = type?.element?.name;
+      final constructorName = node.constructorName;
 
-      if (className == null) return;
+      // ✅ Nếu type là SimpleIdentifier mà bắt đầu bằng chữ cái viết hoa
+      // → Đang dùng ClassName.constructor() → BÁO LỖI
+      // Nếu không có prefix (chỉ có .constructor()) → ĐÃ ĐÚNG → BỎ QUA
 
-      if (!_flutterStaticMembers.contains(className)) return;
+      final type = constructorName.type;
 
-      // if (_isInConstContext(node)) return; // ← XÓA
+      final typeName = type.name2.toString();
+
+      // ✅ Nếu đã dùng dot shorthand (không có prefix), bỏ qua
+      // Kiểm tra: nếu source code bắt đầu bằng "." thì đã đúng rồi
+      final source = node.toSource();
+      if (source.startsWith('.')) return; // ← ĐÃ DÙNG DOT SHORTHAND
+
+      // Check nếu là Flutter class
+      if (!_flutterStaticMembers.contains(typeName)) return;
 
       if (_canUseShorthandForConstructor(node)) {
         reporter.atNode(node, _code);
@@ -196,14 +196,12 @@ class _ReplaceWithShorthand extends DartFix {
       final replacement = '.$enumValue';
 
       final changeBuilder = reporter.createChangeBuilder(
-        message: 'Thay thế bằng $replacement (và bỏ const nếu cần)',
+        message: 'Thay thế bằng $replacement',
         priority: 80,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleReplacement(node.sourceRange, replacement);
-
-        _removeConstKeyword(node, builder);
       });
     });
 
@@ -214,13 +212,12 @@ class _ReplaceWithShorthand extends DartFix {
       final replacement = '.$propertyName';
 
       final changeBuilder = reporter.createChangeBuilder(
-        message: 'Thay thế bằng $replacement (và bỏ const nếu cần)',
+        message: 'Thay thế bằng $replacement',
         priority: 80,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleReplacement(node.sourceRange, replacement);
-        _removeConstKeyword(node, builder);
       });
     });
 
@@ -236,47 +233,13 @@ class _ReplaceWithShorthand extends DartFix {
       final replacement = '.$name$args';
 
       final changeBuilder = reporter.createChangeBuilder(
-        message: 'Thay thế bằng $replacement (và bỏ const nếu cần)',
+        message: 'Thay thế bằng $replacement',
         priority: 80,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleReplacement(node.sourceRange, replacement);
-        _removeConstKeyword(node, builder);
       });
     });
-  }
-
-  /// Tìm và xóa const keyword ở parent
-  void _removeConstKeyword(AstNode node, builder) {
-    AstNode? current = node;
-
-    while (current != null) {
-      if (current is InstanceCreationExpression && current.keyword != null) {
-        if (current.keyword!.lexeme == 'const') {
-          builder.addDeletion(
-            current.keyword!.offset,
-            current.keyword!.length + 1,
-          );
-          return;
-        }
-      }
-
-      if (current is VariableDeclaration) {
-        final parent = current.parent;
-        if (parent is VariableDeclarationList && parent.keyword != null) {
-          if (parent.keyword!.lexeme == 'const') {
-            builder.addSimpleReplacement(
-              parent.keyword!.offset,
-              parent.keyword!.length,
-              'final',
-            );
-            return;
-          }
-        }
-      }
-
-      current = current.parent;
-    }
   }
 }
