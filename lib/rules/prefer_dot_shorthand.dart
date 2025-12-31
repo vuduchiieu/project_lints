@@ -58,7 +58,8 @@ class PreferDotShorthandRule extends DartLintRule {
     'Radius',
     'Rect',
     'BoxShape',
-    'WidgetStateProperty',
+    'MaterialStateProperty',
+    'double',
   };
 
   @override
