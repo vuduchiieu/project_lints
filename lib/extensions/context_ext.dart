@@ -7,5 +7,5 @@ extension BuildContexExt on BuildContext {
   double get height => MediaQuery.of(this).size.height;
   double get viewInsets => MediaQuery.of(this).viewInsets.bottom;
   SizedBox get empty => const SizedBox.shrink();
-  void unfocus() => FocusScope.of(this).unfocus();
+void unfocus() => FocusScope.of(this).requestFocus(FocusNode());
 }
